@@ -6,11 +6,12 @@ app = Flask(__name__)
 DB_NAME = "employees.db"
 
 # ----------------------------
-# DATABASE SETUP
+# DATABASE INIT
 # ----------------------------
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS employees (
             id INTEGER PRIMARY KEY,
@@ -18,13 +19,14 @@ def init_db():
             salary REAL NOT NULL
         )
     """)
+
     conn.commit()
     conn.close()
 
 init_db()
 
 # ----------------------------
-# HOME
+# HOME ROUTE
 # ----------------------------
 @app.route("/")
 def home():
@@ -77,7 +79,7 @@ def get_employees():
     return jsonify(employees), 200
 
 # ----------------------------
-# GET ONE EMPLOYEE
+# GET SINGLE EMPLOYEE
 # ----------------------------
 @app.route("/employees/<int:id>", methods=["GET"])
 def get_employee(id):
@@ -94,6 +96,36 @@ def get_employee(id):
     return jsonify({"error": "Employee not found"}), 404
 
 # ----------------------------
+# UPDATE EMPLOYEE (PUT) ⭐ NEW
+# ----------------------------
+@app.route("/employees/<int:id>", methods=["PUT"])
+def update_employee(id):
+    data = request.json
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM employees WHERE id = ?", (id,))
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        return jsonify({"error": "Employee not found"}), 404
+
+    name = data.get("name", row[1])
+    salary = data.get("salary", row[2])
+
+    cursor.execute(
+        "UPDATE employees SET name = ?, salary = ? WHERE id = ?",
+        (name, salary, id)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Employee updated successfully"}), 200
+
+# ----------------------------
 # DELETE EMPLOYEE
 # ----------------------------
 @app.route("/employees/<int:id>", methods=["DELETE"])
@@ -102,6 +134,7 @@ def delete_employee(id):
     cursor = conn.cursor()
 
     cursor.execute("DELETE FROM employees WHERE id = ?", (id,))
+
     conn.commit()
     conn.close()
 
